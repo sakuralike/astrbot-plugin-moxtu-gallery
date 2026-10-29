@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, MessageChain, filter
-from astrbot.api.message_components import Image, Plain
+from astrbot.api.message_components import At, Image, Plain, Reply
 from astrbot.api.star import Context, Star
 from astrbot.core.utils.astrbot_path import get_astrbot_data_path
 
@@ -253,7 +253,7 @@ class MoxtuGalleryPlugin(Star):
             return ""
 
     async def _send_text(self, event: AstrMessageEvent, text: str) -> None:
-        await event.send(MessageChain([Plain(str(text))]))
+        await event.send(MessageChain([Plain(str(text))]).use_markdown(False))
 
     async def _send_image(
         self,
@@ -266,7 +266,7 @@ class MoxtuGalleryPlugin(Star):
         mode = str(self.config.get("caption_reply_mode", "silent") or "silent")
         if caption and mode == "append":
             chain.append(Plain(f"\n图片转述：{caption}"))
-        await event.send(MessageChain(chain))
+        await event.send(MessageChain(chain).use_markdown(False))
         if caption and mode == "separate":
             await self._send_text(event, f"图片转述：{caption}")
 
@@ -684,6 +684,16 @@ class MoxtuGalleryPlugin(Star):
         finally:
             self._running.discard(message_key)
             cleanup_temp_dir(temp_dir)
+
+    @filter.on_decorating_result()
+    async def qq_pc_compatible_reply(self, event: AstrMessageEvent):
+        if self._terminated or event.get_platform_name() != "qq_official":
+            return
+        result = event.get_result()
+        if result is None or not result.chain:
+            return
+        if all(isinstance(component, (Plain, At, Reply)) for component in result.chain):
+            result.use_markdown(False)
 
     async def terminate(self) -> None:
         self._terminated = True
