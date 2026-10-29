@@ -36,6 +36,8 @@ from .security import (
 
 
 PLUGIN_ID = "astrbot_plugin_moxtu_gallery"
+DEFAULT_UPLOAD_COMMAND = "上传图片"
+DEFAULT_RANDOM_COMMAND = "来点图康康"
 
 
 def _as_bool(value: Any, default: bool = False) -> bool:
@@ -91,12 +93,30 @@ def _host(value: str) -> str:
         return ""
 
 
+def _command_name(value: Any, default: str) -> str:
+    if not isinstance(value, str):
+        return default
+    command = value.strip().lstrip("/").strip()
+    if not command or any(char.isspace() for char in command):
+        return default
+    return command
+
+
 class MoxtuGalleryPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.context = context
         self.config = config
         self.enabled = _as_bool(config.get("enabled", False))
+        self.upload_command = _command_name(
+            config.get("upload_command", DEFAULT_UPLOAD_COMMAND),
+            DEFAULT_UPLOAD_COMMAND,
+        )
+        self.random_command = _command_name(
+            config.get("random_command", DEFAULT_RANDOM_COMMAND),
+            DEFAULT_RANDOM_COMMAND,
+        )
+        self._configure_commands()
         self.allowed_groups = set(_as_text_list(config.get("allowed_groups", [])))
         self.upload_allowed_users = set(
             _as_text_list(config.get("upload_allowed_users", []))
@@ -152,6 +172,37 @@ class MoxtuGalleryPlugin(Star):
             self._settings = None
             self.enabled = False
             logger.error("Moxtu 图床插件配置无效：%s", error)
+
+    def _configure_commands(self) -> None:
+        try:
+            from astrbot.core.star.star_handler import star_handlers_registry
+        except Exception:
+            return
+
+        command_names = {
+            "upload_image": (self.upload_command, DEFAULT_UPLOAD_COMMAND),
+            "random_image": (self.random_command, DEFAULT_RANDOM_COMMAND),
+        }
+        for handler_name, (command_name, default_name) in command_names.items():
+            handler = star_handlers_registry.get_handler_by_full_name(
+                f"{__name__}_{handler_name}"
+            )
+            if handler is None:
+                continue
+            for filter_ref in handler.event_filters:
+                if not hasattr(filter_ref, "command_name"):
+                    continue
+                base_aliases = getattr(filter_ref, "_moxtu_base_aliases", None)
+                if base_aliases is None:
+                    base_aliases = set(getattr(filter_ref, "alias", set()))
+                    filter_ref._moxtu_base_aliases = set(base_aliases)
+                aliases = set(base_aliases)
+                if command_name != default_name:
+                    aliases.add(default_name)
+                filter_ref.command_name = command_name
+                filter_ref.alias = aliases
+                filter_ref._cmpl_cmd_names = None
+                break
 
     def _scope(self, event: AstrMessageEvent) -> str | None:
         if not self.enabled or self._terminated:
@@ -313,7 +364,7 @@ class MoxtuGalleryPlugin(Star):
             ),
         )
 
-    @filter.command("上传图片")
+    @filter.command(DEFAULT_UPLOAD_COMMAND)
     async def upload_image(self, event: AstrMessageEvent) -> None:
         scope = self._scope(event)
         if scope is None or self._client is None:
@@ -562,7 +613,7 @@ class MoxtuGalleryPlugin(Star):
                 return ""
         return _photo_url(photo)
 
-    @filter.command("来点图康康")
+    @filter.command(DEFAULT_RANDOM_COMMAND)
     async def random_image(self, event: AstrMessageEvent) -> None:
         scope = self._scope(event)
         if scope is None or self._client is None:

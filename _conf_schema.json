@@ -4,6 +4,18 @@
     "description": "启用兰空图床图片互动",
     "default": false
   },
+  "upload_command": {
+    "type": "string",
+    "description": "上传图片命令",
+    "default": "上传图片",
+    "hint": "可填写自定义命令词，不含 / 或空格；留空使用默认命令。"
+  },
+  "random_command": {
+    "type": "string",
+    "description": "随机图片命令",
+    "default": "来点图康康",
+    "hint": "可填写自定义命令词，不含 / 或空格；留空使用默认命令。"
+  },
   "api_base_url": {
     "type": "string",
     "description": "图床站点地址",
