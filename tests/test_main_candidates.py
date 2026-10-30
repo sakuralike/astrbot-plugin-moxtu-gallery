@@ -33,7 +33,12 @@ def _load_main_module():
     )
     modules["astrbot.api.event"].AstrMessageEvent = object
     modules["astrbot.api.event"].MessageChain = list
-    modules["astrbot.api.event"].filter = types.SimpleNamespace(command=command)
+    modules["astrbot.api.event"].filter = types.SimpleNamespace(
+        command=command,
+        on_decorating_result=lambda: (lambda handler: handler),
+    )
+    modules["astrbot.api.message_components"].At = type("At", (), {})
+    modules["astrbot.api.message_components"].Reply = type("Reply", (), {})
     modules["astrbot.api.message_components"].Image = types.SimpleNamespace(
         fromFileSystem=lambda path: path
     )

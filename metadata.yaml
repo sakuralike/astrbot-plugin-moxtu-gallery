@@ -1,7 +1,7 @@
 name: astrbot_plugin_moxtu_gallery
 display_name: Moxtu 兰空图床图片互动
 desc: 上传群图片到专属兰空图床相册，并随机回复合规图片。
-version: 0.1.2
+version: 0.1.3
 author: sakuralike
 repo: https://github.com/sakuralike/astrbot-plugin-moxtu-gallery
 support_platforms:
